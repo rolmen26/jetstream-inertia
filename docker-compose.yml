@@ -1,0 +1,72 @@
+version: '3'
+
+services:
+  web-app:
+    build: ./
+    container_name: web-app
+    restart: always
+    ports:
+      - "${APP_PORT}:8080"
+    volumes:
+      - ./:/var/www/html
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./docker/php/fpm-pool.conf:/usr/local/etc/php-fpm.d/fpm-pool.conf
+      - ./docker/supervisor/supervisord.conf:/etc/supervisor/supervisord.conf
+    networks:
+      - jetstream
+
+  front-app:
+    image: node:20.6.1-alpine3.18
+    container_name: front-app
+    restart: always
+    working_dir: /app
+    entrypoint: /app/etc/bin/start-front.sh
+    ports:
+      - "5173:5173"
+    volumes:
+    - './:/app'
+    networks:
+      - jetstream
+
+  mysql:
+    image: mysql:8
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+      MYSQL_DATABASE: '${DB_DATABASE}'
+      MYSQL_USER: '${DB_USERNAME}'
+      MYSQL_PASSWORD: '${DB_PASSWORD}'
+    volumes:
+      - mysql:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-p${DB_PASSWORD}" ]
+      retries: 3
+      timeout: 5s
+    networks:
+      - jetstream
+    ports:
+      - "3306:3306"
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:5
+    container_name: phpmyadmin
+    restart: always
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: '${DB_USERNAME}'
+      PMA_PASSWORD: '${DB_PASSWORD}'
+    ports:
+      - "8081:80"
+    networks:
+      - jetstream
+    
+
+networks:
+  jetstream:
+    driver: bridge
+
+volumes:
+  mysql:
+    driver: local
