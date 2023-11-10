@@ -5,3 +5,15 @@
 [x-cloak] {
     display: none;
 }
+
+.header {
+    @apply relative p-1 mb-8 overflow-hidden bg-indigo-200 rounded-sm sm:p-2;
+}
+
+.header-text {
+    @apply mb-1 text-lg font-bold text-gray-800 md:text-xl;
+}
+
+button {
+    @apply focus:outline-none;
+}
