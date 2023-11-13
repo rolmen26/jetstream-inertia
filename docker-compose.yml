@@ -28,37 +28,38 @@ services:
         networks:
             - 'jetstream'
 
-    mysql:
-        image: mysql:8
-        container_name: mysql
-        restart: always
-        environment:
-            MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
-            MYSQL_DATABASE: '${DB_DATABASE}'
-            MYSQL_USER: '${DB_USERNAME}'
-            MYSQL_PASSWORD: '${DB_PASSWORD}'
-        volumes:
-            - mysql:/var/lib/mysql
-        healthcheck:
-            test: [ "CMD", "mysqladmin", "ping", "-p${DB_PASSWORD}" ]
-            retries: 3
-            timeout: 5s
+    mongo:
+        image: mongo:5.0
+        container_name: mongodb
+        restart: unless-stopped
+        ports:
+            - ${MONGODB_PORT}:27017
         networks:
             - 'jetstream'
-        ports:
-            - "3306:3306"
-
-    phpmyadmin:
-        image: phpmyadmin/phpmyadmin:5
-        container_name: phpmyadmin
-        restart: always
         environment:
-            PMA_HOST: mysql
-            PMA_PORT: 3306
-            PMA_USER: '${DB_USERNAME}'
-            PMA_PASSWORD: '${DB_PASSWORD}'
+            - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USER}
+            - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
+            - MONGO_INITDB_DATABASE=${MONGODB_DATABASE}
+        volumes:
+            - mongodata:/data/db
+
+    mongo-express:
+        image: mongo-express:1-20-alpine3.18
+        container_name: mongo-express
+        restart: unless-stopped
+        depends_on:
+            - 'mongo'
+        environment:
+            - ME_CONFIG_MONGODB_SERVER=mongo
+            - ME_CONFIG_MONGODB_PORT=${MONGODB_PORT}
+            - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
+            - ME_CONFIG_MONGODB_AUTH_DATABASE=admin
+            - ME_CONFIG_MONGODB_AUTH_USERNAME=${MONGO_ROOT_USER}
+            - ME_CONFIG_MONGODB_AUTH_PASSWORD=${MONGO_ROOT_PASSWORD}
+            - ME_CONFIG_BASICAUTH_USERNAME=${MONGOEXPRESS_LOGIN}
+            - ME_CONFIG_BASICAUTH_PASSWORD=${MONGOEXPRESS_PASSWORD}
         ports:
-            - "8081:80"
+            - "8888:8081"
         networks:
             - 'jetstream'
 
@@ -67,5 +68,5 @@ networks:
         driver: bridge
 
 volumes:
-    mysql:
+    mongodata:
         driver: local
